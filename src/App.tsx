@@ -100,7 +100,7 @@ function App() {
         <form onSubmit={handleSubmit} className="flex">
           <Input
             type="text"
-            placeholder="Enter student name"
+            placeholder="Ingresa el nombre"
             value={newStudentName}
             onChange={(e) => setNewStudentName(e.target.value)}
             className="mr-2"
