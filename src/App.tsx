@@ -100,7 +100,12 @@ function App() {
         <div className="relative">
           <h1 className="text-4xl font-bold mb-4 transition duration-300 ease-in-out hover:scale-110">
             Funny Names
-          </h1>
+       
+            
+            
+            <Badge variant="secondary"> <div className='text-lg font-bold'>by pblks</div> <div className='pl-1'>  | off until future updates</div></Badge>
+          </h1> 
+          
           <div className="absolute top-0 right-0 transform -translate-y-1/2 translate-x-1/2 pl-2 h-4 w-4">
             <div className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></div>
             <div className="relative inline-flex rounded-full h-4 w-4 bg-sky-500"></div>
