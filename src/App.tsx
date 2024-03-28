@@ -12,16 +12,20 @@ import { z } from 'zod';
 interface Student {
   id: number;
   name: string;
+  username: string;
 }
 
-const studentNameSchema = z.object({
+const studentSchema = z.object({
   name: z.string().max(100, 'Name should not exceed 100 characters'),
+  username: z.string().min(1, 'Username is required').max(100, 'Username should not exceed 100 characters'),
 });
 
 function App() {
   const [students, setStudents] = useState<Student[]>([]);
   const [newStudentName, setNewStudentName] = useState('');
+  const [newStudentUsername, setNewStudentUsername] = useState('');
   const [nameError, setNameError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [remainingChances, setRemainingChances] = useState(() => {
     const storedChances = localStorage.getItem('remainingChances');
     return storedChances ? parseInt(storedChances, 10) : 5;
@@ -49,38 +53,46 @@ function App() {
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (remainingChances <= 0) {
-      setNameError('You have exceeded the maximum number of chances.');
-      return;
-    }
-    try {
-      const validatedData = studentNameSchema.parse({ name: newStudentName });
-      setNameError('');
-      await axios.post(
-        'https://teaching-dingo-central.ngrok-free.app/students',
-        validatedData,
-        {
-          headers: {
-            'ngrok-skip-browser-warning': 'true',
-          },
-        }
-      );
-      setNewStudentName('');
-      fetchStudents();
-      setRemainingChances((prevChances) => {
-        const updatedChances = prevChances - 1;
-        localStorage.setItem('remainingChances', updatedChances.toString());
-        return updatedChances;
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        setNameError(error.issues[0].message);
-      } else {
-        console.error('Error adding student:', error);
+  e.preventDefault();
+  if (remainingChances <= 0) {
+    setNameError('You have exceeded the maximum number of chances.');
+    return;
+  }
+  try {
+    const validatedData = studentSchema.parse({ name: newStudentName, username: newStudentUsername });
+    setNameError('');
+    setUsernameError('');
+    await axios.post(
+      'https://teaching-dingo-central.ngrok-free.app/students',
+      // Send the entire validatedData object which includes both name and username
+      validatedData,
+      {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
       }
+    );
+    setNewStudentName('');
+    setNewStudentUsername('');
+    fetchStudents();
+    setRemainingChances((prevChances) => {
+      const updatedChances = prevChances - 1;
+      localStorage.setItem('remainingChances', updatedChances.toString());
+      return updatedChances;
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const nameIssue = error.issues.find((issue) => issue.path[0] === 'name');
+      const usernameIssue = error.issues.find((issue) => issue.path[0] === 'username');
+      setNameError(nameIssue?.message || '');
+      setUsernameError(usernameIssue?.message || '');
+    } else {
+      console.error('Error adding student:', error);
     }
-  };
+  }
+};
+
+  const isSubmitDisabled = newStudentUsername.trim() === '' || remainingChances <= 0;
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
@@ -97,16 +109,24 @@ function App() {
         <ModeToggle />
       </div>
       <div className="App">
-        <form onSubmit={handleSubmit} className="flex">
+        <form onSubmit={handleSubmit} className="flex flex-col">
           <Input
             type="text"
             placeholder="Ingresa el nombre"
             value={newStudentName}
             onChange={(e) => setNewStudentName(e.target.value)}
-            className="mr-2"
+            className="mr-2 mb-2"
           />
           {nameError && <p className="text-red-500 text-sm mt-1">{nameError}</p>}
-          <Button type="submit" disabled={remainingChances <= 0}>
+          <Input
+            type="text"
+            placeholder="Hazte responsable e ingresa un nombre de usuario"
+            value={newStudentUsername}
+            onChange={(e) => setNewStudentUsername(e.target.value)}
+            className="mr-2 mb-2"
+          />
+          {usernameError && <p className="text-red-500 text-sm mt-1">{usernameError}</p>}
+          <Button type="submit" disabled={isSubmitDisabled}>
             Agregar nombre
           </Button>
         </form>
@@ -117,7 +137,12 @@ function App() {
           <CardContent>
             <ul className="text-lg">
               {students.map((student) => (
-                <li key={student.id}>{student.name}</li>
+                <li key={student.id}>
+                  <strong>
+                    <Badge variant="secondary">{student.username}:</Badge>
+                  </strong>{' '}
+                  {student.name}
+                </li>
               ))}
             </ul>
           </CardContent>
